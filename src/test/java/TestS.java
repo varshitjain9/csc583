@@ -10,7 +10,7 @@ public class TestS {
         String index = "src/main/resources/stemlemma";
         String stemm = "src/main/resources/stem";
         String lemm = "src/main/resources/lemma";
-        String neither = "src/main/resources/index";
+        String neither = "src/main/resources/nostemlemm";
 
         try{
             String queryProcess = new QueryProcess(index).evalQuery();

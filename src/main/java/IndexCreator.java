@@ -18,9 +18,12 @@ import java.util.Locale;
 import java.util.Scanner;
 
 public class IndexCreator {
+
     private String indexPath;
-    boolean useLemma=false;
-    boolean useStem =false;
+
+    boolean useLemma=true;
+    boolean useStem =true;
+
     public IndexCreator(String indexPath) {
         this.indexPath= indexPath;
     }
@@ -47,6 +50,7 @@ public class IndexCreator {
         Scanner sc = new Scanner(f);
         String title="";
         StringBuilder ans = new StringBuilder();
+
         while(sc.hasNextLine()) {
             String s1 = sc.nextLine();
             int len = s1.length();
@@ -58,9 +62,11 @@ public class IndexCreator {
                 title = (s1.substring(s1.indexOf("[[") + 2, s1.indexOf("]]")));
                 categories = "";
                 material = new StringBuilder();
-            } else if (s1.indexOf("CATEGORIES:") == 0) {
+            }
+            else if (s1.indexOf("CATEGORIES:") == 0) {
                 categories = s1.substring(12);
-            } else if (s1.length() > 2 && s1.charAt(0) != '=' && s1.charAt(len - 1) != '=' && s1.charAt(0) != '#') {
+            }
+            else if (s1.length() > 2 && s1.charAt(0) != '=' && s1.charAt(len - 1) != '=' && s1.charAt(0) != '#') {
                 if (!s1.equals("See also") && !s1.equals("References") && !s1.equals("Further reading") && !s1.equals("External links")) {
                     material.append(s1 + " ");
                 }
@@ -71,9 +77,6 @@ public class IndexCreator {
 
     public void addDoc(IndexWriter w, String title,String categories, String content) throws IOException{
         Document doc = new Document();
-
-        StringBuilder cat = new StringBuilder("");
-        StringBuilder txt = new StringBuilder("");
         if(content.equals("")) {
             content = ".";
         }
@@ -81,45 +84,47 @@ public class IndexCreator {
             categories = ".";
         }
         if(useLemma) {
-            categories = convertLemma(cat, categories);
-            content = convertLemma(txt, content);
+            StringBuilder b = new StringBuilder("");
+            if (!categories.isEmpty()) {
+                for (String lemma : new Sentence(categories.toLowerCase()).lemmas()) {
+                    b.append(lemma).append(" ");
+                }
+                categories = b.toString();
+            }
+            StringBuilder b1 = new StringBuilder("");
+            if (!content.isEmpty()) {
+                for (String lemma : new Sentence(content.toLowerCase()).lemmas()) {
+                    b1.append(lemma).append(" ");
+                }
+                content = b1.toString();
+            }
         }
         if(useStem){
-            categories = convertStem(cat, categories);
-            content = convertStem(txt, content);
+            PorterStemmer stemmer = new PorterStemmer();
+            StringBuilder a2 = new StringBuilder("");
+            for(String word: new Sentence(categories.toLowerCase()).words()) {
+                stemmer.setCurrent(word);
+                stemmer.stem();
+                a2.append(stemmer.getCurrent() + " ");
+            }
+            categories= a2.toString();
+            StringBuilder a3 = new StringBuilder("");
+            for(String word: new Sentence(categories.toLowerCase()).words()) {
+                stemmer.setCurrent(word);
+                stemmer.stem();
+                a3.append(stemmer.getCurrent() + " ");
+            }
+            categories= a3.toString();
         }
         doc.add(new StringField("Title", title, Field.Store.YES));
         doc.add(new TextField("categories", categories.trim(), Field.Store.YES));
         doc.add(new TextField("Content", content.trim(), Field.Store.YES));
         w.addDocument(doc);
     }
-    private String convertLemma(StringBuilder b, String s) {
-        if (s.isEmpty()) {
-            return s;
-        }
-        for (String lemma : new Sentence(s.toLowerCase()).lemmas()) {
-            b.append(lemma).append(" ");
-        }
-        return b.toString();
-    }
-
-    private String convertStem(StringBuilder b, String s) {
-        for(String word: new Sentence(s.toLowerCase()).words()) {
-            b.append(getStem(word) + " ");
-        }
-        return b.toString();
-    }
-
-    private String getStem(String term) {
-        PorterStemmer stemmer = new PorterStemmer();
-        stemmer.setCurrent(term);
-        stemmer.stem();
-        return stemmer.getCurrent();
-    }
 
     public static void main(String[] args) throws IOException {
-        IndexCreator indexCreator = new IndexCreator("src/main/resources/index");
-        //indexCreator.parseFiles("src/main/resources/wiki-subset");
+        IndexCreator indexCreator = new IndexCreator("src/main/resources/stemlemma");
+//        indexCreator.parseFiles("src/main/resources/wiki-subset");
         QueryProcess queryProcess = new QueryProcess("src/main/resources/stemlemma");
         System.out.println(queryProcess.evalQuery());
     }

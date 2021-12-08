@@ -102,30 +102,23 @@ public class QueryProcess {
         return "P@1: "+ correct+"/"+ttl+"="+div+"\nReranking Result\n"+"P@1: "+reCorrect+"/"+ttl+"="+reDiv;
     }
 
-    private String convertLemma(StringBuilder b, String s) {
-        for (String lemma : new Sentence(s.toLowerCase()).lemmas()) {
-            b.append(lemma).append(" ");
-        }
-        return b.toString();
-    }
-
-    private void convertStem(StringBuilder b, String s) {
-        for(String word: new Sentence(s.toLowerCase()).words()) {
-            PorterStemmer stemmer = new PorterStemmer();
-            stemmer.setCurrent(word);
-            stemmer.stem();
-            b.append(stemmer.getCurrent()+ " ");
-        }
-    }
-
     public List<ResultClass> runQuery(String query, boolean rerank) throws IOException{
         List<ResultClass> ans = new ArrayList<ResultClass>();
         StandardAnalyzer standardAnalyzer = new StandardAnalyzer();
         StringBuilder stem = new StringBuilder();
+        StringBuilder b = new StringBuilder();
+        PorterStemmer stemmer = new PorterStemmer();
         try {
-            query= query.replaceAll("[^ a-zA-Z\\d]", " ").toLowerCase().trim();;
-            convertStem(stem, query);
-            convertLemma(stem,query);
+            query= query.replaceAll("[^ a-zA-Z\\d]", " ").toLowerCase().trim();
+            for (String lemma : new Sentence(query.toLowerCase()).lemmas()) {
+                b.append(lemma).append(" ");
+            }
+            query = b.toString();
+            for(String word: new Sentence(query.toLowerCase()).words()) {
+                stemmer.setCurrent(word);
+                stemmer.stem();
+                stem.append(stemmer.getCurrent()+ " ");
+            }
             query = stem.toString();
             Directory index = FSDirectory.open(new File(indexPath).toPath());
             Query query1 = new QueryParser("Content", standardAnalyzer).parse(QueryParser.escape(query));
@@ -158,6 +151,7 @@ public class QueryProcess {
     }
 
     public List<ResultClass> reRank(String queryExpr, TopDocs topDocs, IndexSearcher searcher) throws IOException {
+
         List<ResultClass> res = new ArrayList<>();
         String[] queryArr = queryExpr.split(" ");
         Map<Integer, List<String>> docMap = new HashMap<>();
